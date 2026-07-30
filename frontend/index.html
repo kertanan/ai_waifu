@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waifu Chat Live2D</title>
+
+
+    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.2/dist/browser/pixi.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/cubism4.min.js"></script>
+
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            background-color: #0f172a;
+            background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.35)), url("Assets/1012111.jpg");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            overflow: hidden;
+            position: relative;
+            color: #fff;
+        }
+
+        .waifu-container {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        #live2d-canvas,
+        #three-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            pointer-events: auto;
+        }
+
+        .sidebar {
+            position: fixed;
+            right: 16px;
+            top: 16px;
+            z-index: 12;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .sidebar img {
+            width: 72px;
+            height: 72px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            object-fit: cover;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .sidebar img:active {
+            transform: scale(0.96);
+        }
+
+        .chat-container {
+            position: fixed;
+            left: 50%;
+            bottom: max(14px, env(safe-area-inset-bottom));
+            transform: translateX(-50%);
+            width: min(92vw, 860px);
+            height: min(38vh, 320px);
+            max-height: 360px;
+            background: rgba(255, 255, 255, 0.62);
+            border-radius: 20px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+        }
+
+        .header {
+            background: rgba(255, 107, 129, 0.8);
+            color: white;
+            padding: 12px 14px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 12px 14px;
+            overflow-y: auto;
+            background: transparent;
+        }
+
+        .message {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message.waifu {
+            align-items: flex-start;
+        }
+
+        .bubble {
+            max-width: min(80%, 320px);
+            padding: 10px 14px;
+            border-radius: 15px;
+            line-height: 1.4;
+            font-size: 0.95rem;
+        }
+
+        .user .bubble {
+            background: rgba(0, 123, 255, 0.9);
+            color: white;
+            border-bottom-right-radius: 0;
+        }
+
+        .waifu .bubble {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border-bottom-left-radius: 0;
+        }
+
+        .input-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 12px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 999px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.7);
+            color: #333;
+            font-size: 0.95rem;
+        }
+
+        button {
+            padding: 10px 16px;
+            background: #ff6b81;
+            color: white;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s ease;
+        }
+
+        button:hover {
+            background: #ff475f;
+        }
+
+        #mic-btn {
+            flex: 0 0 44px;
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #6c757d;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                right: 10px;
+                top: 10px;
+                gap: 8px;
+            }
+
+            .sidebar img {
+                width: 58px;
+                height: 58px;
+            }
+
+            .chat-container {
+                width: calc(100vw - 20px);
+                height: min(46vh, 360px);
+                max-height: 360px;
+            }
+
+            .header {
+                padding: 10px 12px;
+                font-size: 0.95rem;
+            }
+
+            .messages {
+                padding: 10px 12px;
+            }
+
+            .bubble {
+                max-width: 88%;
+                padding: 9px 12px;
+                font-size: 0.9rem;
+            }
+
+            .input-area {
+                padding: 8px;
+            }
+
+            input {
+                padding: 10px 12px;
+                font-size: 0.92rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar {
+                right: 8px;
+                top: 8px;
+                flex-direction: row;
+            }
+
+            .sidebar img {
+                width: 50px;
+                height: 50px;
+            }
+
+            .chat-container {
+                width: calc(100vw - 12px);
+                height: min(50vh, 360px);
+                border-radius: 16px;
+            }
+
+            .input-area {
+                flex-wrap: wrap;
+            }
+
+            input {
+                order: 1;
+                flex: 1 1 calc(100% - 100px);
+            }
+
+            #mic-btn {
+                order: 2;
+            }
+
+            .send-btn {
+                order: 3;
+                flex: 1 1 100%;
+                margin-left: 0;
+                margin-top: 4px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="waifu-container" id="container-3d" style="display: none; z-index: 2;">
+        <canvas id="three-canvas"></canvas>
+    </div>
+    <div class="waifu-container" id="container-2d" style="z-index: 2;">
+        <canvas id="live2d-canvas"></canvas>
+    </div>
+    <!-- Sidebar Thumbnail -->
+    <div class="sidebar">
+        <img src="Assets/thumbnail/Thumbnail_yiyi.png" onclick="window.switchCharacter('2d')"
+            style="border: 3px solid #ff6b81;"
+            id="thumb-2d" title="Yiyi (2.5D)">
+        <img src="Assets/thumbnail/Thumbnail_sakura.png" onclick="window.switchCharacter('3d')"
+            style="border: 3px solid transparent;"
+            id="thumb-3d" title="Sakura (3D)">
+    </div>
+
+    <div class="chat-container" style="z-index: 10;">
+        <div class="header">Chat dengan AI Waifu</div>
+        <div class="messages" id="chat-box"></div>
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Ketik pesanmu di sini..."
+                onkeypress="handleKeyPress(event)">
+            <button id="mic-btn" onclick="toggleRecording()" aria-label="Aktifkan mikrofon">🎤</button>
+            <button class="send-btn" onclick="sendMessage()">Kirim</button>
+        </div>
+    </div>
+
+    <script>
+        window.waifuModel2D = null;
+        window.waifuModel3D = null;
+        window.activeWaifuType = "2d";
+
+        const assetBase = window.location.pathname.includes('/frontend/') ? '../' : './';
+        document.body.style.backgroundImage = `linear-gradient(135deg, rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.35)), url('${assetBase}Assets/1012111.jpg')`;
+
+        const thumb2D = document.getElementById('thumb-2d');
+        const thumb3D = document.getElementById('thumb-3d');
+        if (thumb2D) thumb2D.src = `${assetBase}Assets/thumbnail/Thumbnail_yiyi.png`;
+        if (thumb3D) thumb3D.src = `${assetBase}Assets/thumbnail/Thumbnail_sakura.png`;
+
+        const canvas = document.getElementById('live2d-canvas');
+        const app = new PIXI.Application({
+            view: canvas,
+            autoStart: true,
+            transparent: true,
+            resizeTo: window
+        });
+        const modelUrl = `${assetBase}Character/PinkHair_workshop_2802653785/yiyi_chair.model3.json`;
+
+        // Definisi fungsi switchCharacter secara global agar selalu bisa dipanggil
+        window.switchCharacter = function (type) {
+            const container2D = document.getElementById('container-2d');
+            const container3D = document.getElementById('container-3d');
+            const thumb2D = document.getElementById('thumb-2d');
+            const thumb3D = document.getElementById('thumb-3d');
+
+            if (type === '2d') {
+                container2D.style.display = 'block';
+                container3D.style.display = 'none';
+                window.activeWaifuType = '2d';
+                if (thumb2D) thumb2D.style.borderColor = '#ff6b81';
+                if (thumb3D) thumb3D.style.borderColor = 'transparent';
+                setTimeout(() => app.renderer.resize(window.innerWidth, window.innerHeight), 50);
+            } else if (type === '3d') {
+                container2D.style.display = 'none';
+                container3D.style.display = 'block';
+                window.activeWaifuType = '3d';
+                if (thumb3D) thumb3D.style.borderColor = '#ff6b81';
+                if (thumb2D) thumb2D.style.borderColor = 'transparent';
+            }
+        };
+
+        PIXI.live2d.Live2DModel.from(modelUrl).then(model => {
+            app.stage.addChild(model);
+
+            // Kembalikan anchor ke tengah agar posisinya pas
+            model.anchor.set(0.5);
+
+            function resizeModel() {
+                // Posisikan ke tengah layar, turun sedikit
+                model.x = app.screen.width / 2;
+                model.y = app.screen.height / 2 + (app.screen.height * 0.1);
+
+                // Set skala tetap yang sangat kecil agar tidak raksasa
+                // Anda bisa mengubah nilai 0.08 ini jika masih kurang pas
+                model.scale.set(0.08);
+            }
+
+            // Panggil sekali saat dimuat
+            resizeModel();
+
+            // Panggil otomatis setiap kali ukuran layar berubah
+            window.addEventListener('resize', resizeModel);
+
+            window.waifuModel = model;
+            console.log("Model berhasil dimuat!");
+        }).catch(err => {
+            console.error("Gagal memuat model:", err);
+        });
+
+
+        async function sendMessage() {
+            const inputField = document.getElementById('user-input');
+            const text = inputField.value.trim();
+            if (!text) return;
+
+            appendMessage('user', text);
+            inputField.value = '';
+
+            try {
+
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat: text, number: 1 })
+                });
+
+                const data = await response.json();
+                if (data.balasan) {
+                    appendMessage('waifu', data.balasan);
+
+                    // Mainkan audio jika ada (otomatis lip-sync)
+                    if (data.audio) {
+                        const audioBypassCache = data.audio + "?t=" + new Date().getTime();
+
+                        // Mainkan suara secara manual menggunakan objek Audio
+                        const audio = new Audio(audioBypassCache);
+                        audio.play().catch(e => console.error("Gagal memutar audio:", e));
+
+                        if (window.waifuModel) {
+                            try {
+                                // Coba hubungkan ke Live2D untuk lip-sync
+                                window.waifuModel.speak(audioBypassCache, { volume: 1.0 });
+                            } catch (err) {
+                                console.warn("Lip-sync tidak didukung oleh model ini:", err);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                appendMessage('waifu', 'Server backend mati/terputus.');
+            }
+        }
+
+        function appendMessage(sender, text) {
+            const chatBox = document.getElementById('chat-box');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerText = text;
+            messageDiv.appendChild(bubble);
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') sendMessage();
+        }
+
+        // --- Fitur Microphone (Voice Chat) ---
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        async function toggleRecording() {
+            const micBtn = document.getElementById('mic-btn');
+
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        await sendVoiceMessage(audioBlob);
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    micBtn.style.backgroundColor = '#ff475f'; // Merah saat merekam
+                    micBtn.innerText = '⏹️';
+                } catch (error) {
+                    console.error('Error accessing mic:', error);
+                    alert("Gagal mengakses mikrofon. Pastikan browser memberi izin akses.");
+                }
+            } else {
+                mediaRecorder.stop();
+                // Matikan indikator mic di browser
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                micBtn.style.backgroundColor = '#6c757d'; // Kembali abu-abu
+                micBtn.innerText = '🎤';
+            }
+        }
+
+        async function sendVoiceMessage(audioBlob) {
+            appendMessage('user', '🎙️ (Pesan Suara...)');
+
+            const formData = new FormData();
+            formData.append("audio", audioBlob, "voice_message.webm");
+
+            try {
+                const response = await fetch('/api/voice-chat', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.balasan) {
+                    appendMessage('waifu', data.balasan);
+
+                    if (data.audio) {
+                        const audioBypassCache = data.audio + "?t=" + new Date().getTime();
+
+                        // Mainkan suara secara manual menggunakan objek Audio
+                        const audio = new Audio(audioBypassCache);
+                        audio.play().catch(e => console.error("Gagal memutar audio:", e));
+
+                        if (window.waifuModel) {
+                            try {
+                                // Coba hubungkan ke Live2D untuk lip-sync
+                                window.waifuModel.speak(audioBypassCache, { volume: 1.0 });
+                            } catch (err) {
+                                console.warn("Lip-sync tidak didukung oleh model ini:", err);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                appendMessage('waifu', 'Server gagal memproses suara.');
+            }
+        }
+    </script>
+    <script type="module" src="/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+Ekstrak memori penting dari input pengguna. 
+Keluarkan HANYA format JSON valid tanpa teks tambahan.
+Jika tidak ada informasi penting, kembalikan objek kosong: {}
+
+Gunakan format persis seperti ini:
+{
+  "category": "user_info", // bisa 'user_info', 'event', 'preference'
+  "key": "nama_topik",     // misal: 'pekerjaan_hari_ini'
+  "value": "fakta",        // misal: 'sibuk indexing artikel dan monitoring konten'
+  "importance": 8          // skala 1-10 seberapa penting memori ini
+}
