@@ -59,9 +59,24 @@ if (canvas) {
     }
     animate();
 
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
+    // Di HP panel chat menutupi bagian bawah layar. Gambar digeser ke atas
+    // dengan setViewOffset supaya Sakura berada di tengah ruang di atas panel.
+    function layout3D() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const sheet = window.chatSheetHeight ? window.chatSheetHeight() : 0;
+        // aspek = ukuran gambar virtual penuh (w x (h + sheet)), supaya tidak gepeng
+        camera.aspect = w / (h + sheet);
+        if (sheet > 0) {
+            camera.setViewOffset(w, h + sheet, 0, sheet, w, h);
+        } else {
+            camera.clearViewOffset();
+        }
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    }
+
+    layout3D();
+    window.addEventListener('resize', layout3D);
+    if (window.onRelayout) window.onRelayout(layout3D);
 }

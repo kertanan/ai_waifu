@@ -28,6 +28,7 @@ Daftar pekerjaan sesuai [DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md)
 
 - [x] Install Tailscale di laptop (winget, service otomatis), login `ferdisaputra2833@` (2026-11-20). HP belum
 - [x] `tailscale funnel --bg 8080` → alamat tetap https://laptop-7vvb7ba2.tailbfba74.ts.net (publik, tetap jalan setelah restart; menggantikan quick tunnel) (2026-11-20)
+- [x] Tampilan HP (layout responsif ≤640px: bottom sheet chat, karakter muat di atas panel) (2026-11-20)
 - [ ] Tes chat teks, voice chat (mikrofon HP), dan audio balasan dari HP
 - [ ] Pastikan port `1234` / `9880` / `50021` tidak ikut terbuka
 - [x] Frontend statis di Cloudflare Workers (https://ai-waifu.ferdisaputra2833.workers.dev), build `sh tools/build_pages.sh`, `SKIP_DEPENDENCY_INSTALL=1` (2026-11-20)

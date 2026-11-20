@@ -3,7 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="theme-color" content="#ff6b81">
     <title>Waifu Chat Live2D</title>
 
 
@@ -123,6 +125,8 @@
 
         input {
             flex: 1;
+            min-width: 0;
+            /* supaya tombol tidak terdorong keluar di layar sempit */
             padding: 12px;
             border: 1px solid rgba(255, 255, 255, 0.5);
             border-radius: 20px;
@@ -131,7 +135,13 @@
             color: #333;
         }
 
-        button {
+        input:focus-visible {
+            border-color: #ff6b81;
+            box-shadow: 0 0 0 2px rgba(255, 107, 129, 0.45);
+        }
+
+        .input-area button {
+            flex-shrink: 0;
             margin-left: 10px;
             padding: 10px 20px;
             background: #ff6b81;
@@ -142,8 +152,187 @@
             font-weight: bold;
         }
 
-        button:hover {
+        .input-area button:hover {
             background: #ff475f;
+        }
+
+        .input-area .mic-btn {
+            width: 45px;
+            height: 45px;
+            padding: 0;
+            border-radius: 50%;
+            background: #6c757d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+        }
+
+        .input-area .mic-btn.recording {
+            background: #ff475f;
+        }
+
+        button:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: 2px;
+        }
+
+        /* Header chat = tombol untuk menciutkan/membuka panel */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            border: none;
+            font: inherit;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .header .chevron {
+            display: inline-block;
+            transition: transform 0.25s ease;
+        }
+
+        .chat-container.collapsed .header .chevron {
+            transform: rotate(180deg);
+        }
+
+        .chat-container.collapsed {
+            height: auto;
+        }
+
+        .chat-container.collapsed .messages {
+            display: none;
+        }
+
+        /* Pilihan karakter */
+        .char-switch {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .char-thumb {
+            padding: 0;
+            border: 3px solid transparent;
+            border-radius: 10px;
+            background: none;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            line-height: 0;
+        }
+
+        .char-thumb.active {
+            border-color: #ff6b81;
+        }
+
+        .char-thumb img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* ---------- HP / layar sempit ---------- */
+        @media (max-width: 640px) {
+            body,
+            .waifu-container {
+                width: 100%;
+                height: 100vh;
+                height: 100dvh;
+                /* tinggi yang benar walau address bar browser muncul/hilang */
+            }
+
+            /* Panel chat menempel di bawah, selebar layar */
+            .chat-container {
+                left: 0;
+                right: 0;
+                bottom: 0;
+                transform: none;
+                width: 100%;
+                max-width: none;
+                height: 42vh;
+                height: 42dvh;
+                border-radius: 18px 18px 0 0;
+                border-bottom: none;
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+
+            .chat-container.collapsed {
+                height: auto;
+            }
+
+            .header {
+                padding: 8px 10px 10px;
+                flex-direction: column;
+                gap: 4px;
+                font-size: 0.95rem;
+            }
+
+            /* Pegangan kecil di atas header, tanda panel bisa ditarik/ditap */
+            .header::before {
+                content: "";
+                width: 36px;
+                height: 4px;
+                border-radius: 2px;
+                background: rgba(255, 255, 255, 0.8);
+            }
+
+            .header .chevron {
+                display: none;
+            }
+
+            .messages {
+                padding: 12px;
+            }
+
+            .bubble {
+                max-width: 85%;
+            }
+
+            .input-area {
+                padding: 8px;
+                gap: 8px;
+            }
+
+            .input-area button {
+                margin-left: 0;
+                padding: 10px 16px;
+            }
+
+            input {
+                font-size: 16px;
+                /* < 16px membuat iPhone otomatis zoom saat mengetik */
+            }
+
+            .char-switch {
+                top: calc(10px + env(safe-area-inset-top));
+                right: 10px;
+                gap: 8px;
+            }
+
+            .char-thumb {
+                border-width: 2px;
+                border-radius: 12px;
+            }
+
+            .char-thumb img {
+                width: 48px;
+                height: 48px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .header .chevron {
+                transition: none;
+            }
         }
     </style>
 </head>
@@ -157,25 +346,29 @@
         <canvas id="live2d-canvas"></canvas>
     </div>
     <!-- Sidebar Thumbnail -->
-    <div class="sidebar"
-        style="position: absolute; right: 20px; top: 20px; z-index: 10; display: flex; flex-direction: column; gap: 15px;">
-        <img src="/Assets/thumbnail/Thumbnail_yiyi.png" onclick="window.switchCharacter('2d')"
-            style="width: 80px; height: 80px; border-radius: 10px; cursor: pointer; border: 3px solid #ff6b81; object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.3);"
-            id="thumb-2d" title="Yiyi (2.5D)">
-        <img src="/Assets/thumbnail/Thumbnail_sakura.png" onclick="window.switchCharacter('3d')"
-            style="width: 80px; height: 80px; border-radius: 10px; cursor: pointer; border: 3px solid transparent; object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.3);"
-            id="thumb-3d" title="Sakura (3D)">
+    <div class="char-switch" role="group" aria-label="Pilih karakter">
+        <button type="button" class="char-thumb active" id="thumb-2d" onclick="window.switchCharacter('2d')"
+            title="Yiyi (2.5D)" aria-label="Yiyi (2.5D)" aria-pressed="true">
+            <img src="/Assets/thumbnail/Thumbnail_yiyi.png" alt="">
+        </button>
+        <button type="button" class="char-thumb" id="thumb-3d" onclick="window.switchCharacter('3d')"
+            title="Sakura (3D)" aria-label="Sakura (3D)" aria-pressed="false">
+            <img src="/Assets/thumbnail/Thumbnail_sakura.png" alt="">
+        </button>
     </div>
 
-    <div class="chat-container" style="z-index: 10;">
-        <div class="header">Chat dengan AI Waifu</div>
-        <div class="messages" id="chat-box"></div>
+    <div class="chat-container" id="chat-panel" style="z-index: 10;">
+        <button type="button" class="header" id="chat-toggle" aria-expanded="true" aria-controls="chat-box"
+            title="Ciutkan chat">
+            <span>Chat dengan AI Waifu</span><span class="chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="messages" id="chat-box" aria-live="polite"></div>
         <div class="input-area">
-            <input type="text" id="user-input" placeholder="Ketik pesanmu di sini..."
-                onkeypress="handleKeyPress(event)">
-            <button id="mic-btn" onclick="toggleRecording()"
-                style="background-color: #6c757d; border-radius: 50%; width: 45px; height: 45px; padding: 0; display: flex; justify-content: center; align-items: center; font-size: 1.2rem;">🎤</button>
-            <button onclick="sendMessage()">Kirim</button>
+            <input type="text" id="user-input" placeholder="Ketik pesanmu di sini..." enterkeyhint="send"
+                aria-label="Pesan" onkeypress="handleKeyPress(event)">
+            <button type="button" id="mic-btn" class="mic-btn" onclick="toggleRecording()"
+                aria-label="Rekam pesan suara">🎤</button>
+            <button type="button" onclick="sendMessage()">Kirim</button>
         </div>
     </div>
 
@@ -204,21 +397,39 @@
             const thumb2D = document.getElementById('thumb-2d');
             const thumb3D = document.getElementById('thumb-3d');
 
-            if (type === '2d') {
-                container2D.style.display = 'block';
-                container3D.style.display = 'none';
-                window.activeWaifuType = '2d';
-                if (thumb2D) thumb2D.style.borderColor = '#ff6b81';
-                if (thumb3D) thumb3D.style.borderColor = 'transparent';
-                setTimeout(() => app.renderer.resize(window.innerWidth, window.innerHeight), 50);
-            } else if (type === '3d') {
-                container2D.style.display = 'none';
-                container3D.style.display = 'block';
-                window.activeWaifuType = '3d';
-                if (thumb3D) thumb3D.style.borderColor = '#ff6b81';
-                if (thumb2D) thumb2D.style.borderColor = 'transparent';
+            const is2D = type === '2d';
+            container2D.style.display = is2D ? 'block' : 'none';
+            container3D.style.display = is2D ? 'none' : 'block';
+            window.activeWaifuType = is2D ? '2d' : '3d';
+            for (const [thumb, active] of [[thumb2D, is2D], [thumb3D, !is2D]]) {
+                if (!thumb) continue;
+                thumb.classList.toggle('active', active);
+                thumb.setAttribute('aria-pressed', String(active));
             }
+            if (is2D) setTimeout(() => app.renderer.resize(window.innerWidth, window.innerHeight), 50);
+            window.relayoutCharacter();
         };
+
+        // --- Tata letak HP ---
+        // Di layar sempit panel chat menutupi bagian bawah layar, jadi karakter
+        // ditaruh di ruang di atasnya. Di desktop posisinya tetap seperti dulu.
+        const MOBILE_MAX_WIDTH = 640;
+        const chatPanel = document.getElementById('chat-panel');
+        const chatToggle = document.getElementById('chat-toggle');
+
+        window.isMobileLayout = () => window.innerWidth <= MOBILE_MAX_WIDTH;
+        window.chatSheetHeight = () => window.isMobileLayout() ? chatPanel.offsetHeight : 0;
+
+        const relayoutHooks = [];
+        window.onRelayout = fn => relayoutHooks.push(fn);
+        window.relayoutCharacter = () => relayoutHooks.forEach(fn => fn());
+
+        chatToggle.addEventListener('click', () => {
+            const collapsed = chatPanel.classList.toggle('collapsed');
+            chatToggle.setAttribute('aria-expanded', String(!collapsed));
+            chatToggle.title = collapsed ? 'Buka chat' : 'Ciutkan chat';
+            window.relayoutCharacter();
+        });
 
         PIXI.live2d.Live2DModel.from(modelUrl).then(model => {
             app.stage.addChild(model);
@@ -226,21 +437,39 @@
             // Kembalikan anchor ke tengah agar posisinya pas
             model.anchor.set(0.5);
 
-            function resizeModel() {
-                // Posisikan ke tengah layar, turun sedikit
-                model.x = app.screen.width / 2;
-                model.y = app.screen.height / 2 + (app.screen.height * 0.1);
+            const DESKTOP_SCALE = 0.08;
+            // Ukuran asli model (skala 1) untuk menghitung skala di HP
+            model.scale.set(1);
+            const baseWidth = model.width;
+            const baseHeight = model.height;
 
-                // Set skala tetap yang sangat kecil agar tidak raksasa
-                // Anda bisa mengubah nilai 0.08 ini jika masih kurang pas
-                model.scale.set(0.08);
+            function resizeModel() {
+                const w = app.screen.width;
+                const h = app.screen.height;
+
+                if (!window.isMobileLayout()) {
+                    // Desktop: tengah layar, turun sedikit, skala tetap
+                    model.scale.set(DESKTOP_SCALE);
+                    model.x = w / 2;
+                    model.y = h / 2 + h * 0.1;
+                    return;
+                }
+
+                // HP: kepala dekat atas layar, kaki menyelinap di belakang panel chat
+                // (seperti di desktop), jadi karakter tetap besar walau layar kecil
+                const free = h - window.chatSheetHeight();
+                const scale = Math.min(DESKTOP_SCALE, (free * 1.35) / baseHeight, (w * 0.98) / baseWidth);
+                model.scale.set(scale);
+                model.x = w / 2;
+                model.y = free * 0.04 + (baseHeight * scale) / 2;
             }
 
             // Panggil sekali saat dimuat
             resizeModel();
 
-            // Panggil otomatis setiap kali ukuran layar berubah
+            // Panggil otomatis setiap kali ukuran layar atau panel chat berubah
             window.addEventListener('resize', resizeModel);
+            window.onRelayout(resizeModel);
 
             window.waifuModel = model;
             console.log("Model berhasil dimuat!");
@@ -369,8 +598,9 @@
 
                     mediaRecorder.start();
                     isRecording = true;
-                    micBtn.style.backgroundColor = '#ff475f'; // Merah saat merekam
+                    micBtn.classList.add('recording'); // Merah saat merekam
                     micBtn.innerText = '⏹️';
+                    micBtn.setAttribute('aria-label', 'Berhenti merekam dan kirim');
                 } catch (error) {
                     console.error('Error accessing mic:', error);
                     alert("Gagal mengakses mikrofon. Pastikan browser memberi izin akses.");
@@ -380,8 +610,9 @@
                 // Matikan indikator mic di browser
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
                 isRecording = false;
-                micBtn.style.backgroundColor = '#6c757d'; // Kembali abu-abu
+                micBtn.classList.remove('recording'); // Kembali abu-abu
                 micBtn.innerText = '🎤';
+                micBtn.setAttribute('aria-label', 'Rekam pesan suara');
             }
         }
 
