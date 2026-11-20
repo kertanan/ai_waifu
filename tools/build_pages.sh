@@ -16,6 +16,8 @@ cp -r Assets/thumbnail Assets/animation Assets/1012111.jpg dist/Assets/
 
 # Alamat backend disuntikkan sebelum script utama di index.html
 API="${SAKURA_API_URL:-}"
+API="${API%/}"
+case "$API" in null|undefined|none) API="" ;; esac
 if [ -n "$API" ]; then
   sed -i "s#<head>#<head>\n    <script>window.SAKURA_API_URL = \"$API\";</script>#" dist/index.html
   echo "SAKURA_API_URL = $API"
