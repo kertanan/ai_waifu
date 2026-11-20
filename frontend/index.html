@@ -410,6 +410,10 @@
             }
         }
     </script>
+    <!-- GLTFLoader, OrbitControls & three-vrm mengimpor 'three' (bare specifier). Harus URL yang sama dengan app.js -->
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.154.0/build/three.module.js" } }
+    </script>
     <script type="module" src="/app.js"></script>
 </body>
 

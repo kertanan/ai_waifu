@@ -11,7 +11,7 @@ Daftar pekerjaan sesuai [DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md)
 - [x] CORS dipersempit, dengan origin diatur lewat `.env` `ALLOWED_ORIGINS` (default: localhost:8080)
 - [x] `audio` bernilai `null` kalau TTS gagal (dulu tetap mengirim URL ke file lama)
 - [x] Tes end-to-end dengan `sakura-qwen3-4b` + VOICEVOX (2026-11-18): chat teks, 2 chat paralel, voice chat (Whisper), upload nama berbahaya, semuanya OK
-- [ ] Tes end-to-end dengan GPT-SoVITS menyala
+- [ ] Tes end-to-end dengan GPT-SoVITS menyala (user akan tes sendiri lewat workers.dev)
 - [x] Balasan kosong → retry otomatis (maks. `LLM_MAX_ATTEMPTS`=3), lalu kalimat cadangan
 - [x] Teks balasan dikirim dulu, audio dibuat di latar belakang (`audio_wait` → `GET /api/audio/{id}`); frontend memutar audio bergantian
 - [x] Database dikunci (`db_lock`): cursor SQLite bersama aman dipakai chat paralel
@@ -26,7 +26,10 @@ Daftar pekerjaan sesuai [DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md)
 - [ ] `tailscale serve` → `127.0.0.1:8080`, lalu buka alamat `https://<laptop>.<tailnet>.ts.net` dari HP
 - [ ] Tes chat teks, voice chat (mikrofon HP), dan audio balasan dari HP
 - [ ] Pastikan port `1234` / `9880` / `50021` tidak ikut terbuka
-- [ ] (Opsional) Cloudflare Tunnel + Cloudflare Access kalau perlu akses tanpa Tailscale
+- [x] Frontend statis di Cloudflare Workers (https://ai-waifu.ferdisaputra2833.workers.dev), build `sh tools/build_pages.sh`, `SKIP_DEPENDENCY_INSTALL=1` (2026-11-20)
+- [x] Quick tunnel `cloudflared` → `127.0.0.1:8080`, alamatnya diisi ke `SAKURA_API_URL`; chat lewat tunnel OK (±10 dtk)
+- [ ] Named tunnel + domain sendiri (alamat quick tunnel berganti tiap restart)
+- [ ] Cloudflare Access di depan tunnel (sekarang backend terbuka untuk siapa saja yang tahu alamatnya)
 
 ## 2. Fitur "Sakura menyemangati saat error"
 

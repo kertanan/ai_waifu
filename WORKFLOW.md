@@ -28,6 +28,7 @@ Bagian ini merangkum kondisi proyek dan pekerjaan yang belum selesai. Daftar len
 - CLI LM Studio: `~/.lmstudio/bin/lms`. Folder model: `E:\lm_studio\model`.
 - Saat tes, jangan nyalakan GPT-SoVITS kecuali memang diminta.
 - **GitHub (`kertanan/ai_waifu`, publik):** sejak 2026-11-20 `.env`, `token.txt`, `database.db`, `data/`, `Assets/book_train/` dan file `.wav` masuk `.gitignore`. Ketiga file rahasia masih ada di riwayat commit pertama, jadi token/kunci di dalamnya harus diganti.
+- **Online (2026-11-20):** frontend di https://ai-waifu.ferdisaputra2833.workers.dev (Cloudflare Workers, `wrangler.jsonc` + `tools/build_pages.sh`, env `SKIP_DEPENDENCY_INSTALL=1` dan `SAKURA_API_URL`). Backend tetap di laptop lewat quick tunnel `cloudflared tunnel --url http://127.0.0.1:8080`; setiap alamat tunnel berubah, perbarui `SAKURA_API_URL` lalu deploy ulang. Domain workers.dev sudah masuk `ALLOWED_ORIGINS` di `.env`. Belum ada login (perlu Cloudflare Access).
 - Frontend memakai `API_URL` (dari `window.SAKURA_API_URL`, default kosong = server yang sama). Isi kalau frontend di-host terpisah, misalnya di Cloudflare Pages.
 
 ### Belum dikerjakan (urutan yang disarankan)
