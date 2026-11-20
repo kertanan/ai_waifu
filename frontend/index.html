@@ -303,7 +303,7 @@
 
             try {
 
-                const response = await fetch('/api/chat', {
+                const response = await fetch(`${API_URL}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ chat: text, number: 1 })
@@ -387,7 +387,7 @@
             formData.append("audio", audioBlob, "voice_message.webm");
 
             try {
-                const response = await fetch('/api/voice-chat', {
+                const response = await fetch(`${API_URL}/api/voice-chat`, {
                     method: 'POST',
                     body: formData
                 });
