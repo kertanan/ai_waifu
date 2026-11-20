@@ -13,7 +13,7 @@ Daftar pekerjaan sesuai [DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md)
 - [x] Tes end-to-end dengan `sakura-qwen3-4b` + VOICEVOX (2026-11-18): chat teks, 2 chat paralel, voice chat (Whisper), upload nama berbahaya, semuanya OK
 - [x] Tes end-to-end dengan GPT-SoVITS menyala (2026-11-20, lewat tunnel): teks 4 dtk, audio SoVITS char001 15 dtk. LLM dimuat `--gpu 0.5` supaya muat bareng SoVITS (VRAM ±3,5/4 GB)
 - [x] GPT-SoVITS sebagai service NSSM `AIWaifuSoVITS` (LocalSystem, auto start, log `logs/sovits.log`)
-- [ ] LM Studio sebagai service NSSM `AIWaifuLLM` (`tools/llm_watchdog.ps1`: daemon + server :1234 + load `--gpu 0.5`, dicek tiap 60 dtk). Terpasang, tinggal set Log On `.\user` di services.msc lalu Start
+- [ ] LM Studio sebagai service NSSM `AIWaifuLLM` (`tools/llm_watchdog.ps1`: daemon + server :1234 + load `--gpu off` (dulu 0.5, VRAM 96%), dicek tiap 60 dtk). Terpasang, tinggal set Log On `.\user` di services.msc lalu Start
 - [ ] Tes reboot: semua service menyala sendiri tanpa membuka LM Studio / GPT-SoVITS
 - [x] `voicefox.py`: setelah SoVITS restart, bobot char001 dimuat ulang (dulu diam-diam pakai suara bawaan)
 - [x] Balasan kosong → retry otomatis (maks. `LLM_MAX_ATTEMPTS`=3), lalu kalimat cadangan

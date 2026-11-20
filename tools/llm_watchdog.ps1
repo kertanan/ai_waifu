@@ -5,7 +5,7 @@
 param(
     [string]$Lms = "C:\Users\user\.lmstudio\bin\lms.exe",
     [string]$Model = "qwen/qwen3-4b-2507",
-    [string]$Gpu = "0.5",
+    [string]$Gpu = "off",   # off = LLM di CPU, VRAM 4 GB dipakai GPT-SoVITS (2026-11-20; dulu 0.5)
     [int]$Context = 8192,
     [int]$Port = 1234,
     [int]$IntervalSec = 60,
