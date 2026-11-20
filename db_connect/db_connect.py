@@ -1,4 +1,6 @@
+import functools
 import sqlite3
+import threading
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import json
@@ -7,6 +9,18 @@ import re
 
 db = sqlite3.connect("database.db", check_same_thread=False)
 cursor = db.cursor()
+
+# Satu koneksi & cursor dipakai bersama oleh semua thread (rute FastAPI `def` berjalan di threadpool).
+# Tanpa kunci, dua chat bersamaan bisa saling menimpa `cursor.lastrowid` / transaksi.
+db_lock = threading.RLock()
+
+
+def _locked(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with db_lock:
+            return fn(*args, **kwargs)
+    return wrapper
 
 def create_tables():
     cursor.execute('''
@@ -78,6 +92,7 @@ def extract_data_keuangan(teks: str) -> dict:
     return {"kategori": "umum", "jumlah": jumlah, "tipe": "transaksi", "keterangan": teks}
 
 # Fungsi untuk menghitung sisa saldo dengan menjumlahkan pemasukan dan mengurangkan pengeluaran
+@_locked
 def cek_keuangan(intent: str = "") -> str:
     try:
         # Hitung Pemasukan
@@ -114,6 +129,7 @@ def cek_keuangan(intent: str = "") -> str:
 
 # Endpoint dipindah ke router
 @router.post("/api/chat_db")
+@_locked
 def chat_sakura(request: PesanUser):
     try:
         pesan = request.teks
@@ -161,6 +177,7 @@ def chat_sakura(request: PesanUser):
         db.rollback()
         return {"status": "error", "message": str(e)}
 
+@_locked
 def proses_pesan_utama(pesan: str) -> dict:
     try:
         intent_user = deteksi_intent(pesan)
@@ -198,6 +215,7 @@ def proses_pesan_utama(pesan: str) -> dict:
         print("DB Error:", e)
         return {"handled": False, "intent": "error"}
 
+@_locked
 def simpan_log_llm(pesan: str, respon_ai: str):
     try:
         cursor.execute("INSERT INTO interaksi_utama(pesan_user, intent) VALUES (?,?)", [pesan, 'ngobrol_biasa'])

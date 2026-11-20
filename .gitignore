@@ -2,3 +2,21 @@ SWG Collector/RAG_Collector/stack overflow/raw/
 venv/
 __pycache__/
 node_modules/
+# model suara hasil training (besar)
+voice_model/
+
+# audio balasan Sakura (dibuat otomatis, dihapus setelah 1 jam)
+voicefox_source/replies/
+
+# rahasia & data pribadi (jangan di-commit)
+.env
+token.txt
+database.db
+
+# audio hasil TTS
+voicefox_source/*.wav
+
+# venv lain & data besar / dataset training
+*-venv/
+data/
+Assets/book_train/

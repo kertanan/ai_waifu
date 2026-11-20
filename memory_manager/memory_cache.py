@@ -5,6 +5,7 @@ import logging
 import requests
 from rapidfuzz import fuzz, process
 from LLM.intent_classifier import save_cache
+from LLM.llm_config import LLM_URL, LLM_MODEL, get_headers, clean_reply
 
 
 def normalize_text(text: str) -> str: 
@@ -97,17 +98,16 @@ def get_response (User_id: str, user_text: str, message: str):
 
 #return the response from the LLM Studio API
 def fetch_from_llm_studio (User_text:  str): 
-    LLM_STUDIO_URL = "http://localhost:1234/v1/chat/completions"
+    LLM_STUDIO_URL = LLM_URL
     system_prompt = open (
         "source/system_prompt.txt", "r", encoding="utf-8"
     ).read()
 
     payload = {
-        "model": "ibm/granite-4-micro",
+        "model": LLM_MODEL,
         "messages":[
             {"role" : "system", "content": system_prompt},
             {"role" : "user", "content": User_text},
-            {"role" : "assistant", "content": ""}
         ],
         "temperature": 0
     }
@@ -115,11 +115,11 @@ def fetch_from_llm_studio (User_text:  str):
     try:
         r = requests.post(
             LLM_STUDIO_URL,
-            json = payload
+            json = payload,
+            headers = get_headers()
         )
         r.raise_for_status()
-        text = r.json()["choices"][0]["message"]["content"]
-        text = text.strip()
+        text = clean_reply(r.json()["choices"][0]["message"]["content"])
         if text.startswith("```json"):
             text = text[7:]
         if text.startswith("```"):

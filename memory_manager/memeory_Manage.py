@@ -3,7 +3,7 @@ import json
 
 from rich import text
 
-LLM_STUDIO_URL = "http://localhost:1234/v1/chat/completions"  
+from LLM.llm_config import LLM_URL as LLM_STUDIO_URL, LLM_MODEL, get_headers, clean_reply
 
 def extract_memory(user_text):
 
@@ -12,23 +12,21 @@ def extract_memory(user_text):
     ).read()
 
     payload = {
-        "model": "ibm/granite-4-micro",
+        "model": LLM_MODEL,
         "messages":[
             {"role" : "system", "content": system_prompt},
             {"role" : "user", "content": user_text},
-            {"role" : "assistant", "content": ""}
         ],
         "temperature": 0
     }
 
     r = requests.post(
         LLM_STUDIO_URL,
-        json = payload
+        json = payload,
+        headers = get_headers()
     )
 
-    text = r.json()["choices"][0]["message"]["content"]
-
-    text = text.strip()
+    text = clean_reply(r.json()["choices"][0]["message"]["content"])
     if text.startswith("```json"):
         text = text[7:]
     if text.startswith("```"):

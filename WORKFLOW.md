@@ -1,5 +1,48 @@
 # Waifu AI Assistant - System Workflow
 
+## Recap terakhir (2026-11-20): baca ini dulu sebelum lanjut
+
+Bagian ini merangkum kondisi proyek dan pekerjaan yang belum selesai. Daftar lengkap ada di [TODO.md](TODO.md), rencana server di [DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md).
+
+### Kondisi sekarang
+
+- **LLM:** `.env` memakai `LM_STUDIO_MODEL=qwen/qwen3-4b-2507` (model dasar) dengan system prompt bahasa Jepang di `source/system_prompt.txt`. Prompt lama (bahasa Inggris) disimpan di `source/system_prompt_original_en.txt`.
+- **Fine-tune v1** (`sakura-qwen3-4b` di LM Studio) kalah dari model dasar + prompt Jepang:
+  - Model dasar: Jepang 20/20, tsundere 15/20, fakta 6/6.
+  - v1: Jepang 16/20, tsundere 8/20, fakta 3/6, dan kadang balasan kosong atau berawalan tag `<tool_call>`.
+  - Penyebabnya: data latih berisi blok `<think></think>` kosong, dan sampelnya cuma ±2.7k.
+  - File: GGUF di `E:\lm_studio\model\local\sakura-qwen3-4b-GGUF\`, LoRA di `data/result_of_finetuning/sakura_lora`.
+- **Fine-tune dihentikan (2026-11-20):** GPU T4 di Colab/Kaggle tidak kuat untuk Qwen3-4B. Notebook v2 (`tools/finetune/sft_qlora_sakura_colab.ipynb`) disimpan tapi tidak dijalankan. Sakura tetap memakai model dasar + prompt Jepang.
+- **Server (`api_server.py`)** sudah diperbaiki untuk chat paralel:
+  - Rute `/api/chat` dan `/api/voice-chat` berupa `def` biasa, jadi jalan di threadpool.
+  - Teks dikirim duluan. Audio dibuat di antrean TTS latar belakang, lalu frontend mengambilnya lewat `GET /api/audio/{id}`.
+  - Balasan kosong dicoba ulang (`LLM_MAX_ATTEMPTS`, default 3). Kalau tetap kosong, dipakai kalimat cadangan.
+  - Database dikunci dengan `db_lock`. `clean_reply` di `LLM/llm_config.py` membuang tag `<tool_call>`/`<think>`.
+- **TTS:** GPT-SoVITS tetap utama, VOICEVOX jadi cadangan. Kalau SoVITS mati, `speech/voicefox.py` melewatinya selama 60 detik (`SOVITS_RETRY_SEC`). Audio disimpan di `voicefox_source/replies/<uuid>.wav` dan dihapus otomatis setelah 1 jam.
+- **Hasil tes 2026-11-18** (`sakura-qwen3-4b` + VOICEVOX, SoVITS mati): 1 chat → teks 4,7 dtk. 2 chat paralel → teks 5,5 dtk dan 6,0 dtk. Chat teks, voice chat (Whisper) dan upload file berbahaya semuanya OK.
+
+### Catatan penting
+
+- Jalankan server dengan Python utama: `D:\python\python api_server.py`. Venv `E:\mitm-env` yang aktif di terminal berisi paket `whisper` yang salah.
+- Laptop (RTX 2050 4 GB, RAM 16 GB) memproses LM Studio dan VOICEVOX satu per satu, jadi chat ke-3 yang dikirim bersamaan tetap menunggu. Ini batas hardware, bukan bug.
+- CLI LM Studio: `~/.lmstudio/bin/lms`. Folder model: `E:\lm_studio\model`.
+- Saat tes, jangan nyalakan GPT-SoVITS kecuali memang diminta.
+
+### Belum dikerjakan (urutan yang disarankan)
+
+1. **Tes end-to-end dengan GPT-SoVITS menyala.**
+2. **Tahap 1, akses dari HP (gratis):** Tailscale + `tailscale serve` ke `127.0.0.1:8080`. Pastikan port 1234 / 9880 / 50021 tidak ikut terbuka.
+3. **Fitur "Sakura menyemangati saat error":** `POST /api/event`, WebSocket `/ws`, dan hook PowerShell (contoh reaksi: 頑張れあなた).
+4. **Router coding:** permintaan coding dikirim ke model coding. Sakura hanya membacakan ringkasan.
+5. **Avatar 3D:** ekspresi dipicu WebSocket, lip-sync dari audio.
+6. **Rapikan kode:**
+   - Pipeline memori setelah `uvicorn.run(...)` di `api_server.py` tidak pernah jalan. Sambungkan ke chat atau hapus.
+   - Batasi mount `/Assets`, karena sekarang ikut membuka `Assets/book_train` (187 MB).
+   - Tinjau `/api/chat_db` (data keuangan).
+7. **Atribusi dataset** CC-BY-4.0 (`scryptiam/anime-waifu-personality-chat`): hanya kalau model v1 atau dataset-nya dibagikan.
+
+---
+
 ## System Overview
 
 This is an AI Waifu chatbot system with Live2D/3D character visualization, voice interaction, memory management, and financial tracking capabilities.
@@ -42,7 +85,7 @@ This is an AI Waifu chatbot system with Live2D/3D character visualization, voice
                 ▼               ▼               ▼
         ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
         │  SQLite DB    │ │  LM Studio    │ │  SQLite DB    │
-        │ database.db   │ │  (Granite)    │ │  memory table │
+        │ database.db   │ │ (Qwen3-4B)    │ │  memory table │
         │               │ │  port 1234    │ │               │
         └───────────────┘ └───────────────┘ └───────────────┘
                                     │
@@ -51,7 +94,7 @@ This is an AI Waifu chatbot system with Live2D/3D character visualization, voice
                     │         Voicevox TTS           │
                     │      (port 50021)              │
                     │  - Audio synthesis             │
-                    │  - Generates reply.wav         │
+                    │  - replies/<uuid>.wav         │
                     └───────────────────────────────┘
 ```
 
@@ -80,8 +123,9 @@ This is an AI Waifu chatbot system with Live2D/3D character visualization, voice
 
 | Endpoint | Method | Input | Output | Description |
 |----------|--------|-------|--------|-------------|
-| `/api/chat` | POST | `{chat: string, number: int}` | `{balasan: string, audio: string}` | Text chat |
-| `/api/voice-chat` | POST | `FormData(audio: File)` | `{balasan: string, audio: string}` | Voice chat |
+| `/api/chat` | POST | `{chat: string, number: int}` | `{balasan, audio_id, audio_wait}` | Text chat (teks langsung, audio menyusul) |
+| `/api/voice-chat` | POST | `FormData(audio: File)` | `{balasan, audio_id, audio_wait}` | Voice chat (Whisper STT) |
+| `/api/audio/{audio_id}` | GET | — | `{ready, url}` | Tunggu audio balasan selesai dibuat (long-poll) |
 
 **Processing Flow:**
 
@@ -110,7 +154,7 @@ User Input (Text/Voice)
     ▼                         ▼
 ┌─────────────┐       ┌─────────────┐
 │ DB Check    │       │  LLM Call   │
-│ (Financial) │       │  (Granite)  │
+│ (Financial) │       │ (Qwen3-4B)  │
 └──────┬──────┘       └──────┬──────┘
        │                     │
        ▼                     ▼
@@ -159,7 +203,7 @@ User Input (Text/Voice)
 ### 4. LLM Integration (`brain.py`)
 
 **Configuration:**
-- **Model:** IBM Granite (via LM Studio)
+- **Model:** `qwen/qwen3-4b-2507` via LM Studio (`LM_STUDIO_MODEL` di `.env`)
 - **Endpoint:** `http://localhost:1234/v1/chat/completions`
 - **System Prompt:** Loaded from `source/system_prompt.txt`
 - **Temperature:** 0.7
@@ -192,7 +236,7 @@ User Input (Text/Voice)
 **Text-to-Speech (Voicevox):**
 - Endpoint: `http://127.0.0.1:50021`
 - Speaker ID: 14 (Meimei Himari)
-- Output: `voicefox_source/reply.wav`
+- Output: `voicefox_source/replies/<uuid>.wav` (dihapus otomatis setelah 1 jam)
 - Features: Natural intonation, speed/pitch control
 
 ---
@@ -207,10 +251,10 @@ User Input (Text/Voice)
 3. proses_chat_llm() called
 4. proses_pesan_utama() checks intent → "ngobrol_biasa" → not handled
 5. LM Studio called with system_prompt + user message
-6. Granite generates: "Halo! Aku baik-baik saja, kamu bagaimana?"
+6. Qwen3 generates: "Halo! Aku baik-baik saja, kamu bagaimana?"
 7. Response logged to database
 8. Voicefox generates audio (Japanese)
-9. Returns {balasan: "...", audio: "/audio/reply.wav"}
+9. Returns {balasan, audio_id, audio_wait} → frontend menunggu GET /api/audio/{id}
 10. Frontend displays message and plays audio
 ```
 
@@ -243,20 +287,67 @@ User Input (Text/Voice)
    ```
 
 2. **External Services**
-   - LM Studio running on port 1234 with Granite model
-   - Voicevox running on port 50021
+   - LM Studio running on port 1234 (`qwen/qwen3-4b-2507`)
+   - GPT-SoVITS api_v2 running on port 9880 (main TTS, voice `char001`)
+   - Voicevox running on port 50021 (fallback TTS)
 
 3. **Database**
    - SQLite database auto-created on first run
 
 ### Starting the System
 
+Urutan start: **LM Studio → GPT-SoVITS → API Server**.
+
 ```bash
-# Start API Server
-python api_server.py
+# 1. Start GPT-SoVITS server (window terpisah, biarkan tetap terbuka)
+tools\start_sovits_api.bat
+
+# 2. Start API Server
+D:\python\python api_server.py   # jangan pakai venv E:\mitm-env
 
 # Access at http://localhost:8080
 ```
+
+### Menjalankan GPT-SoVITS
+
+GPT-SoVITS adalah TTS utama (suara hasil training `char001`). Kalau server ini
+tidak jalan, `speech/voicefox.py` otomatis fallback ke VOICEVOX.
+
+1. **Program** — paket Windows GPT-SoVITS v2Pro di `E:\GPT-SoVITS-v2pro-20250604`
+   (pakai `runtime\python.exe` bawaan, tidak perlu venv). Kalau folder dipindah,
+   ubah `GPT_SOVITS_DIR` di `tools\start_sovits_api.bat`.
+
+2. **Jalankan server** — double-click `tools\start_sovits_api.bat`, atau manual:
+   ```bat
+   cd /d E:\GPT-SoVITS-v2pro-20250604
+   runtime\python.exe api_v2.py -a 127.0.0.1 -p 9880 -c GPT_SoVITS/configs/tts_infer.yaml
+   ```
+   Tunggu sampai muncul `Uvicorn running on http://127.0.0.1:9880`.
+
+3. **Konfigurasi `.env`**
+   ```env
+   TTS_ENGINE=sovits            # "voicevox" untuk pakai VOICEVOX saja
+   SOVITS_URL=http://127.0.0.1:9880
+   SOVITS_MODEL_DIR=voice_model/char001/output
+   SOVITS_TEXT_LANG=ja
+   ```
+
+4. **Model** — `voice_model/char001/output/` berisi bobot GPT (`.ckpt`), SoVITS
+   (`.pth`), `ref.wav` + `ref.txt`, dan `model_info.json`. Bobot dikirim otomatis
+   ke server (`/set_gpt_weights`, `/set_sovits_weights`) saat TTS pertama kali
+   dipanggil — tidak perlu load manual di WebUI.
+
+5. **Tes**
+   ```bash
+   python speech/voicefox.py
+   ```
+   Log `[VOICEFOX] Model 'char001' dimuat ke GPT-SoVITS` = berhasil.
+   Log `GPT-SoVITS gagal (...), beralih ke VOICEVOX` = server belum jalan / error.
+
+**Catatan VRAM (RTX 2050 4 GB):** GPT-SoVITS memakai ~3.3 GB VRAM. Whisper
+dijalankan di CPU dan GPU offload LM Studio dikecilkan supaya tidak out-of-memory.
+Kalau suara terdengar robot/berbeda, cek dulu apakah server SoVITS hidup
+(kemungkinan sedang fallback ke VOICEVOX).
 
 ### Required Files
 

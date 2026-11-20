@@ -3,6 +3,9 @@ import requests
 import os
 import sys
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from LLM.llm_config import LLM_URL, get_headers, build_payload, clean_reply
+
 # Konfigurasi Encoding
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -30,18 +33,14 @@ def generate():
 
     # 3. Setup Payload untuk LM Studio / LLM Lokal
     # Menggunakan endpoint standar OpenAI: /v1/chat/completions
-    base_url = "http://localhost:1234/v1/chat/completions"
+    base_url = LLM_URL
     
     # Format payload yang benar (menggunakan daftar "messages")
-    payload = {
-        "model": "ibm/granite-4-micro", 
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": pesan_user}
-        ],
-        "temperature": 0.7
-    }
-    headers = {"Content-Type": "application/json"}
+    payload = build_payload([
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": pesan_user}
+    ])
+    headers = get_headers()
 
     # 4. Melakukan HTTP POST ke LLM Lokal
     try:
@@ -50,7 +49,7 @@ def generate():
         data_llm = res.json()
         
         # Mengambil teks balasan dari format JSON OpenAI
-        jawaban_ai = data_llm["choices"][0]["message"]["content"]
+        jawaban_ai = clean_reply(data_llm["choices"][0]["message"]["content"])
     except requests.exceptions.RequestException as e:
         print(f"Error koneksi ke LLM: {e}")
         jawaban_ai = "*Maaf, aku tidak bisa menghubungi server otakku (Port 1234 mati atau model belum dimuat).*"
