@@ -39,6 +39,15 @@
             z-index: 1;
             pointer-events: none;
             /* Supaya klik tidak terhalang kanvas, kecuali pada model */
+            overflow: hidden;
+        }
+
+        /* Kanvas tidak boleh menentukan lebar halaman. PIXI membuat kanvas
+           800x600 dulu; tanpa ini browser HP zoom-out dan innerWidth jadi ±800. */
+        .waifu-container canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
         }
 
         #live2d-canvas {
@@ -252,6 +261,8 @@
 
             /* Panel chat menempel di bawah, selebar layar */
             .chat-container {
+                box-sizing: border-box;
+                /* border ikut dihitung dalam 100%, kalau tidak panel 2px lebih lebar dari layar */
                 left: 0;
                 right: 0;
                 bottom: 0;
@@ -381,12 +392,19 @@
         window.waifuModel3D = null;
         window.activeWaifuType = "2d";
 
+        // Ukuran layar dari viewport tata letak (clientWidth), bukan window.innerWidth:
+        // di HP innerWidth ikut berubah kalau browser zoom-out, sehingga bisa salah (mis. 801 di layar 375).
+        window.viewportSize = () => ({
+            width: document.documentElement.clientWidth,
+            height: document.documentElement.clientHeight
+        });
+
         const canvas = document.getElementById('live2d-canvas');
         const app = new PIXI.Application({
             view: canvas,
             autoStart: true,
             transparent: true,
-            resizeTo: window
+            resizeTo: document.documentElement   // = clientWidth/clientHeight
         });
         const modelUrl = '/Character/PinkHair_workshop_2802653785/yiyi_chair.model3.json';
 
@@ -406,7 +424,7 @@
                 thumb.classList.toggle('active', active);
                 thumb.setAttribute('aria-pressed', String(active));
             }
-            if (is2D) setTimeout(() => app.renderer.resize(window.innerWidth, window.innerHeight), 50);
+            if (is2D) setTimeout(() => app.resize(), 50);
             window.relayoutCharacter();
         };
 
@@ -417,7 +435,9 @@
         const chatPanel = document.getElementById('chat-panel');
         const chatToggle = document.getElementById('chat-toggle');
 
-        window.isMobileLayout = () => window.innerWidth <= MOBILE_MAX_WIDTH;
+        // Sama persis dengan @media (max-width: 640px) di CSS
+        const mobileQuery = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`);
+        window.isMobileLayout = () => mobileQuery.matches;
         window.chatSheetHeight = () => window.isMobileLayout() ? chatPanel.offsetHeight : 0;
 
         const relayoutHooks = [];
