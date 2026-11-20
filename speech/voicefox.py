@@ -193,11 +193,14 @@ def generate_play_audio(
 
     print(f"[VOICEFOX] ({TTS_ENGINE}) memproses suara '{processed_text}' (speed={speed})")
 
-    global _sovits_down_until
+    global _sovits_down_until, _sovits_loaded
     if TTS_ENGINE == "sovits" and time.time() >= _sovits_down_until:
         try:
             return generate_sovits(processed_text, speed=speed, output_file=output_file)
         except (requests.exceptions.RequestException, RuntimeError, FileNotFoundError, KeyError) as e:
+            # Server SoVITS bisa saja di-restart: muat ulang bobot char001 di percobaan berikutnya,
+            # kalau tidak, server baru memakai suara bawaan.
+            _sovits_loaded = False
             _sovits_down_until = time.time() + SOVITS_RETRY_SEC
             print(f"[VOICEFOX] GPT-SoVITS gagal ({e}), beralih ke VOICEVOX "
                   f"(SoVITS dilewati {SOVITS_RETRY_SEC:.0f} dtk)")

@@ -16,6 +16,7 @@ cp -r Assets/thumbnail Assets/animation Assets/1012111.jpg dist/Assets/
 
 # Alamat backend disuntikkan sebelum script utama di index.html
 API="${SAKURA_API_URL:-}"
+API="${API%.}"   # titik di akhir sering ikut tersalin dari kalimat
 API="${API%/}"
 case "$API" in null|undefined|none) API="" ;; esac
 if [ -n "$API" ]; then

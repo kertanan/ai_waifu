@@ -23,3 +23,6 @@ Assets/book_train/
 
 # hasil build Cloudflare Pages
 dist/
+
+# log service NSSM
+logs/

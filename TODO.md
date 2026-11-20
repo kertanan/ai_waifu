@@ -11,7 +11,11 @@ Daftar pekerjaan sesuai [DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md)
 - [x] CORS dipersempit, dengan origin diatur lewat `.env` `ALLOWED_ORIGINS` (default: localhost:8080)
 - [x] `audio` bernilai `null` kalau TTS gagal (dulu tetap mengirim URL ke file lama)
 - [x] Tes end-to-end dengan `sakura-qwen3-4b` + VOICEVOX (2026-11-18): chat teks, 2 chat paralel, voice chat (Whisper), upload nama berbahaya, semuanya OK
-- [ ] Tes end-to-end dengan GPT-SoVITS menyala (user akan tes sendiri lewat workers.dev)
+- [x] Tes end-to-end dengan GPT-SoVITS menyala (2026-11-20, lewat tunnel): teks 4 dtk, audio SoVITS char001 15 dtk. LLM dimuat `--gpu 0.5` supaya muat bareng SoVITS (VRAM ±3,5/4 GB)
+- [x] GPT-SoVITS sebagai service NSSM `AIWaifuSoVITS` (LocalSystem, auto start, log `logs/sovits.log`)
+- [ ] LM Studio sebagai service NSSM `AIWaifuLLM` (`tools/llm_watchdog.ps1`: daemon + server :1234 + load `--gpu 0.5`, dicek tiap 60 dtk). Terpasang, tinggal set Log On `.\user` di services.msc lalu Start
+- [ ] Tes reboot: semua service menyala sendiri tanpa membuka LM Studio / GPT-SoVITS
+- [x] `voicefox.py`: setelah SoVITS restart, bobot char001 dimuat ulang (dulu diam-diam pakai suara bawaan)
 - [x] Balasan kosong → retry otomatis (maks. `LLM_MAX_ATTEMPTS`=3), lalu kalimat cadangan
 - [x] Teks balasan dikirim dulu, audio dibuat di latar belakang (`audio_wait` → `GET /api/audio/{id}`); frontend memutar audio bergantian
 - [x] Database dikunci (`db_lock`): cursor SQLite bersama aman dipakai chat paralel
@@ -22,14 +26,15 @@ Daftar pekerjaan sesuai [DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md)
 
 ## 1. Tahap 1: akses dari HP, gratis (Tailscale)
 
-- [ ] Install Tailscale di laptop & HP, login dengan akun yang sama
-- [ ] `tailscale serve` → `127.0.0.1:8080`, lalu buka alamat `https://<laptop>.<tailnet>.ts.net` dari HP
+- [x] Install Tailscale di laptop (winget, service otomatis), login `ferdisaputra2833@` (2026-11-20). HP belum
+- [x] `tailscale funnel --bg 8080` → alamat tetap https://laptop-7vvb7ba2.tailbfba74.ts.net (publik, tetap jalan setelah restart; menggantikan quick tunnel) (2026-11-20)
 - [ ] Tes chat teks, voice chat (mikrofon HP), dan audio balasan dari HP
 - [ ] Pastikan port `1234` / `9880` / `50021` tidak ikut terbuka
 - [x] Frontend statis di Cloudflare Workers (https://ai-waifu.ferdisaputra2833.workers.dev), build `sh tools/build_pages.sh`, `SKIP_DEPENDENCY_INSTALL=1` (2026-11-20)
 - [x] Quick tunnel `cloudflared` → `127.0.0.1:8080`, alamatnya diisi ke `SAKURA_API_URL`; chat lewat tunnel OK (±10 dtk)
-- [ ] Named tunnel + domain sendiri (alamat quick tunnel berganti tiap restart)
-- [ ] Cloudflare Access di depan tunnel (sekarang backend terbuka untuk siapa saja yang tahu alamatnya)
+- [x] ~~Named tunnel + domain sendiri~~ tidak perlu: alamat tetap didapat dari Tailscale Funnel
+- [ ] Login/proteksi backend (Funnel publik: siapa saja yang tahu alamat .ts.net bisa chat)
+- [x] Jalankan `api_server.py` sebagai Windows Service NSSM `AIWaifuBackend` (akun `.\user`, auto start, auto restart; 2026-11-20). Script cadangan `tools/install_service.ps1`, log di `logs/api_server.log`. Mencegah server beku karena QuickEdit CMD
 
 ## 2. Fitur "Sakura menyemangati saat error"
 
@@ -53,6 +58,7 @@ Daftar pekerjaan sesuai [DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md)
 GPU T4 di Colab/Kaggle tidak kuat menjalankan fine-tune Qwen3-4B. Sakura tetap memakai model dasar `qwen/qwen3-4b-2507` + system prompt Jepang (`source/system_prompt.txt`), yang hasilnya sudah lebih baik dari v1.
 
 - [x] Fine-tune v1, hasilnya kalah dari model dasar + prompt Jepang (sekarang `.env` memakai `qwen/qwen3-4b-2507`)
+- [x] System prompt v2 disesuaikan dengan dataset tsundere (バカ tidak lagi di setiap balasan, salam Indonesia dipahami). Notebook ikut diperbarui (2026-11-20)
 - [x] Notebook v2 diperbaiki (`tools/finetune/sft_qlora_sakura_colab.ipynb`): buang `<think>`, user Indonesia/Jepang, filter terjemahan, eval vs baseline
 - ~~Jalankan v2 di Colab/Kaggle → kirim hasil sel 9 (BASELINE vs FINETUNED)~~ (dihentikan: T4 tidak kuat)
 - ~~Kalau v2 menang, pasang GGUF v2 di LM Studio dan ubah `LM_STUDIO_MODEL`~~ (dihentikan)

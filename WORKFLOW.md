@@ -7,6 +7,7 @@ Bagian ini merangkum kondisi proyek dan pekerjaan yang belum selesai. Daftar len
 ### Kondisi sekarang
 
 - **LLM:** `.env` memakai `LM_STUDIO_MODEL=qwen/qwen3-4b-2507` (model dasar) dengan system prompt bahasa Jepang di `source/system_prompt.txt`. Prompt lama (bahasa Inggris) disimpan di `source/system_prompt_original_en.txt`.
+- **Prompt v2 (2026-11-20)** disesuaikan dengan dataset `data/finetune_datasets`: hinaan di ShirayukiV3 cuma ±9%, di anime-waifu 14%, dan menurut dere-types tsundere tidak galak setiap saat. Prompt lama selalu membuka dengan「バ、バカ！」(8/8 tes) dan salah paham「selamat pagi」= さようなら. Prompt baru: バカ ±1 dari 10, salam dibalas salam, pertanyaan dijawab dulu, ada daftar salam Indonesia→Jepang, dan 5 contoh gaya dataset. Hasil tes: バカ 0/24, salam & jawaban benar semua. Kekurangan: 「べ、別に」agak sering, dan「selamat malam」kadang menyalin contoh. Prompt lama ada di `source/system_prompt_v1_jp.txt`.
 - **Fine-tune v1** (`sakura-qwen3-4b` di LM Studio) kalah dari model dasar + prompt Jepang:
   - Model dasar: Jepang 20/20, tsundere 15/20, fakta 6/6.
   - v1: Jepang 16/20, tsundere 8/20, fakta 3/6, dan kadang balasan kosong atau berawalan tag `<tool_call>`.
@@ -28,13 +29,14 @@ Bagian ini merangkum kondisi proyek dan pekerjaan yang belum selesai. Daftar len
 - CLI LM Studio: `~/.lmstudio/bin/lms`. Folder model: `E:\lm_studio\model`.
 - Saat tes, jangan nyalakan GPT-SoVITS kecuali memang diminta.
 - **GitHub (`kertanan/ai_waifu`, publik):** sejak 2026-11-20 `.env`, `token.txt`, `database.db`, `data/`, `Assets/book_train/` dan file `.wav` masuk `.gitignore`. Ketiga file rahasia masih ada di riwayat commit pertama, jadi token/kunci di dalamnya harus diganti.
-- **Online (2026-11-20):** frontend di https://ai-waifu.ferdisaputra2833.workers.dev (Cloudflare Workers, `wrangler.jsonc` + `tools/build_pages.sh`, env `SKIP_DEPENDENCY_INSTALL=1` dan `SAKURA_API_URL`). Backend tetap di laptop lewat quick tunnel `cloudflared tunnel --url http://127.0.0.1:8080`; setiap alamat tunnel berubah, perbarui `SAKURA_API_URL` lalu deploy ulang. Domain workers.dev sudah masuk `ALLOWED_ORIGINS` di `.env`. Belum ada login (perlu Cloudflare Access).
+- **Online (2026-11-20):** frontend di https://ai-waifu.ferdisaputra2833.workers.dev (Cloudflare Workers, `wrangler.jsonc` + `tools/build_pages.sh`, env `SKIP_DEPENDENCY_INSTALL=1` dan `SAKURA_API_URL`). Backend lewat **Tailscale Funnel** dengan alamat tetap `https://laptop-7vvb7ba2.tailbfba74.ts.net` (`tailscale funnel --bg 8080`, service Tailscale otomatis, konfigurasi bertahan setelah restart). `SAKURA_API_URL` cukup diisi alamat itu sekali. Quick tunnel `cloudflared` (alamat acak, mati tiap restart) tidak dipakai lagi. Cek: `tailscale funnel status`. Domain workers.dev sudah masuk `ALLOWED_ORIGINS` di `.env`. Belum ada login: backend terbuka untuk siapa saja yang tahu alamatnya.
+- **Service Windows (NSSM `D:\nssm\nssm-2.24\win64\nssm.exe`, 2026-11-20):** `AIWaifuBackend` (api_server, akun `.\user`), `AIWaifuSoVITS` (GPT-SoVITS :9880, LocalSystem), `AIWaifuLLM` (`tools/llm_watchdog.ps1`: daemon LM Studio + server :1234 + `lms load qwen/qwen3-4b-2507 --gpu 0.5`, akun `.\user`, delayed start). Log semua di `logs/`. Di laptop 4 GB LLM jangan dimuat penuh ke GPU, nanti SoVITS tidak muat. Akses publik lewat Tailscale Funnel (lihat poin Online).
 - Frontend memakai `API_URL` (dari `window.SAKURA_API_URL`, default kosong = server yang sama). Isi kalau frontend di-host terpisah, misalnya di Cloudflare Pages.
 
 ### Belum dikerjakan (urutan yang disarankan)
 
 1. **Tes end-to-end dengan GPT-SoVITS menyala.**
-2. **Tahap 1, akses dari HP (gratis):** Tailscale + `tailscale serve` ke `127.0.0.1:8080`. Pastikan port 1234 / 9880 / 50021 tidak ikut terbuka.
+2. **Tahap 1, akses dari HP:** Funnel sudah jalan; tinggal tes chat/voice dari HP. Pastikan port 1234 / 9880 / 50021 tidak ikut terbuka.
 3. **Fitur "Sakura menyemangati saat error":** `POST /api/event`, WebSocket `/ws`, dan hook PowerShell (contoh reaksi: 頑張れあなた).
 4. **Router coding:** permintaan coding dikirim ke model coding. Sakura hanya membacakan ringkasan.
 5. **Avatar 3D:** ekspresi dipicu WebSocket, lip-sync dari audio.
