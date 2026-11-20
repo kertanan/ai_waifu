@@ -27,6 +27,8 @@ Bagian ini merangkum kondisi proyek dan pekerjaan yang belum selesai. Daftar len
 - Laptop (RTX 2050 4 GB, RAM 16 GB) memproses LM Studio dan VOICEVOX satu per satu, jadi chat ke-3 yang dikirim bersamaan tetap menunggu. Ini batas hardware, bukan bug.
 - CLI LM Studio: `~/.lmstudio/bin/lms`. Folder model: `E:\lm_studio\model`.
 - Saat tes, jangan nyalakan GPT-SoVITS kecuali memang diminta.
+- **GitHub (`kertanan/ai_waifu`, publik):** sejak 2026-11-20 `.env`, `token.txt`, `database.db`, `data/`, `Assets/book_train/` dan file `.wav` masuk `.gitignore`. Ketiga file rahasia masih ada di riwayat commit pertama, jadi token/kunci di dalamnya harus diganti.
+- Frontend memakai `API_URL` (dari `window.SAKURA_API_URL`, default kosong = server yang sama). Isi kalau frontend di-host terpisah, misalnya di Cloudflare Pages.
 
 ### Belum dikerjakan (urutan yang disarankan)
 

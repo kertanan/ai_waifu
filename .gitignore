@@ -20,3 +20,6 @@ voicefox_source/*.wav
 *-venv/
 data/
 Assets/book_train/
+
+# hasil build Cloudflare Pages
+dist/
