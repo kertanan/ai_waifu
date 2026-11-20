@@ -180,6 +180,10 @@
     </div>
 
     <script>
+        // Alamat backend. Kosong = server yang sama (api_server.py :8080).
+        // Kalau frontend di-host terpisah (mis. Cloudflare Pages), isi window.SAKURA_API_URL sebelum script ini.
+        const API_URL = (window.SAKURA_API_URL || "").replace(/\/$/, "");
+
         window.waifuModel2D = null;
         window.waifuModel3D = null;
         window.activeWaifuType = "2d";
@@ -255,7 +259,7 @@
             if (data.audio) return data.audio;
             if (!data.audio_wait) return null;
             try {
-                const res = await fetch(data.audio_wait);
+                const res = await fetch(`${API_URL}${data.audio_wait}`);
                 const info = await res.json();
                 return info.ready ? info.url : null;
             } catch (err) {
@@ -266,7 +270,8 @@
 
         function playAudioUrl(url) {
             return new Promise(resolve => {
-                const audioBypassCache = url + "?t=" + new Date().getTime();
+                const fullUrl = url.startsWith("/") ? API_URL + url : url;
+                const audioBypassCache = fullUrl + "?t=" + new Date().getTime();
 
                 // Mainkan suara secara manual menggunakan objek Audio
                 const audio = new Audio(audioBypassCache);
